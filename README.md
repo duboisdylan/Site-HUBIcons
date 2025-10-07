@@ -1,130 +1,74 @@
 
-# 🖼️ Site-HubIcons — Gestionnaire d’icônes SVG/PNG
+# 🖼️ IconHub — Gestionnaire d’icônes SVG & PNG
 
-Application web permettant d’importer, gérer, copier et télécharger des icônes **SVG** et **PNG**, avec stockage des fichiers directement sur un **serveur IIS** via un **backend Node.js (Express)**.
+**IconHub** est une application web permettant d’importer, visualiser, copier et télécharger des icônes **SVG** et **PNG**, avec stockage des fichiers sur un **serveur IIS** via une **API Node.js Express**.  
+Le frontend est développé en **React + Tailwind CSS + Framer Motion + JSZip + Lucide React**.
 
 ---
 
-## 📦 Structure du projet
+## 📁 Structure du dépôt
 
 ```
-C:\
- ├─ sites\
- │   ├─ iconhub-api\        ← API Node.js (uploads / list / delete)
- │   │   ├─ server.cjs
- │   │   ├─ package.json
- │   │   ├─ uploads\
- │   │   └─ README.md
- │   └─ iconhub-ui\         ← Frontend React (build distribué sur IIS)
- │       └─ build\
- └─ inetpub\
-     └─ wwwroot\            ← Emplacement IIS (sert le build React)
+IconHub/
+ ├─ iconhub-api/       ← API Node.js (Express / Multer / stockage local)
+ ├─ iconhub-ui/        ← Frontend React (Vite + Tailwind + Framer Motion)
+ ├─ .gitignore
+ └─ README.md          ← Ce fichier
 ```
 
 ---
 
-## ⚙️ Installation du backend (Node.js / Express)
+## ⚙️ Technologies
 
-### 1️⃣ Crée le dossier de l’API
-```powershell
-mkdir C:\sites\iconhub-api
-cd C:\sites\iconhub-api
-```
+| Domaine | Technologies |
+|--------|--------------|
+| **Frontend** | React 18+ (ou 19), Vite, Tailwind CSS, Framer Motion, JSZip, Lucide React |
+| **Backend** | Node.js 18+ / 22+, Express, Multer, CORS |
+| **Serveur Web** | IIS + URL Rewrite + ARR (Application Request Routing) |
+| **Build** | Vite (proxy `/api` → Node) |
 
-### 2️⃣ Initialise le projet Node
+---
+
+## 🚀 Démarrage rapide
+
+### 1) Cloner
 ```bash
-npm init -y
-npm i express cors multer
+git clone <url-du-repo> IconHub
+cd IconHub
 ```
 
-### 3️⃣ Crée le fichier **server.cjs**
-```js
-const express = require("express");
-const cors = require("cors");
-const multer = require("multer");
-const fs = require("fs");
-const path = require("path");
-
-const app = express();
-app.use(cors());
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, "uploads");
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
-});
-const upload = multer({ storage });
-
-app.get("/list", (req, res) => {
-  const dir = path.join(__dirname, "uploads");
-  if (!fs.existsSync(dir)) return res.json([]);
-  const files = fs.readdirSync(dir).map((name) => ({
-    name,
-    url: `/uploads/${name}`,
-  }));
-  res.json(files);
-});
-
-app.post("/upload", upload.array("files"), (req, res) => {
-  const files = (req.files || []).map((f) => ({
-    name: f.originalname,
-    url: `/uploads/${path.basename(f.filename)}`,
-    type: f.mimetype,
-    size: f.size,
-  }));
-  res.json(files);
-});
-
-app.delete("/delete/:name", (req, res) => {
-  const p = path.join(__dirname, "uploads", req.params.name);
-  if (fs.existsSync(p)) fs.unlinkSync(p);
-  res.json({ ok: true });
-});
-
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, "127.0.0.1", () =>
-  console.log(`✅ API Icons sur http://127.0.0.1:${PORT}`)
-);
-```
-
-### 4️⃣ Lance l’API
+### 2) Backend (API)
 ```bash
+cd iconhub-api
+npm install
 npm start
 ```
+L’API démarre sur **http://127.0.0.1:3001** par défaut.
 
-Test :
-```powershell
-Invoke-WebRequest -Uri http://127.0.0.1:3001/list
+### 3) Frontend (UI)
+```bash
+cd ../iconhub-ui
+npm install
+npm run dev
 ```
-
-Tu dois obtenir `[]`.
-
----
-
-## 🌐 Configuration IIS
-
-### 1️⃣ Installer les modules IIS nécessaires
-- **URL Rewrite**
-- **Application Request Routing (ARR)**
-
-➡️ Télécharge-les sur [https://www.iis.net/downloads](https://www.iis.net/downloads)
-
-### 2️⃣ Activer le proxy ARR
-1. Ouvre **IIS Manager**
-2. Clique sur le **nœud serveur**
-3. Double-clique **Application Request Routing Cache**
-4. Dans le panneau droit → **Server Proxy Settings...**
-5. Coche **Enable Proxy** → **Apply**
+Ouvre **http://localhost:5173** (ou le port Vite affiché).
 
 ---
 
-## 🧱 Fichier web.config
+## 🧱 Déploiement sur IIS
 
-Place ce fichier à la **racine** du site IIS qui sert le build React :
+1. **Installer** :
+   - [URL Rewrite](https://www.iis.net/downloads/microsoft/url-rewrite)
+   - [ARR (Application Request Routing)](https://www.iis.net/downloads/microsoft/application-request-routing)
+
+2. **Activer le proxy ARR**  
+   _IIS Manager_ → nœud **Serveur** → **Application Request Routing Cache** → **Server Proxy Settings…** → **Enable Proxy** → **Apply**
+
+3. **Placer le build React**  
+   - Compiler l’UI : `cd iconhub-ui && npm run build` → dossier `dist/`
+   - Copier le contenu de `dist/` dans `C:\inetpub\wwwroot\`
+
+4. **Proxy `/api` vers Node** : créer `C:\inetpub\wwwroot\web.config`
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -132,13 +76,10 @@ Place ce fichier à la **racine** du site IIS qui sert le build React :
   <system.webServer>
     <rewrite>
       <rules>
-        <!-- 1️⃣ Proxy /api/... vers Node -->
         <rule name="API to Node" stopProcessing="true">
           <match url="^api/(.*)" />
           <action type="Rewrite" url="http://127.0.0.1:3001/{R:1}" />
         </rule>
-
-        <!-- 2️⃣ Fallback React Router -->
         <rule name="SPA fallback" stopProcessing="true">
           <match url=".*" />
           <conditions logicalGrouping="MatchAll">
@@ -150,8 +91,6 @@ Place ce fichier à la **racine** du site IIS qui sert le build React :
         </rule>
       </rules>
     </rewrite>
-
-    <!-- 3️⃣ Augmenter la taille des uploads -->
     <security>
       <requestFiltering>
         <requestLimits maxAllowedContentLength="104857600" />
@@ -161,63 +100,68 @@ Place ce fichier à la **racine** du site IIS qui sert le build React :
 </configuration>
 ```
 
-> ⚠️ Supprime toute ligne `<serverVariables>` si elle est présente.
+> ⚠️ Si tu avais un bloc `<serverVariables>` (ex: `HTTP_X_FORWARDED_PROTO`), **supprime-le** pour éviter l’erreur **HTTP 500.50**.
 
 ---
 
-## 🚀 Démarrage global
+## 🔌 Endpoints API (rappel)
 
-1. Lancer l’API :
-   ```bash
-   cd C:\sites\iconhub-api
-   npm start
-   ```
-2. Démarrer IIS :
-   ```bash
-   iisreset
-   ```
-3. Tester :
-   - `http://127.0.0.1:3001/list` → doit renvoyer `[]`
-   - `https://TONSITE/api/list` → doit renvoyer aussi `[]`
-4. Depuis ton navigateur :
-   - Ouvre ton site → Upload une icône → elle apparaît immédiatement
-   - Les fichiers sont stockés dans `C:\sites\iconhub-api\uploads`
+| Méthode | Route | Description |
+|--------|------|-------------|
+| GET | `/api/list` | Liste les fichiers dans `uploads/` |
+| POST | `/api/upload` | Upload multiple (`files[]`) |
+| DELETE | `/api/delete/:name` | Supprime un fichier |
 
 ---
 
-## 🧰 Utilitaire de service (optionnel)
+## 🧰 Exécution en service (optionnel)
 
-### Avec **PM2**
+### PM2
 ```bash
 npm i -g pm2
+cd iconhub-api
 pm2 start server.cjs --name iconhub-api
 pm2 save
 pm2 startup
 ```
 
-### Avec **NSSM**
+### NSSM (Windows Service)
 ```bash
-nssm install iconhub-api "C:\Program Files\nodejs\node.exe" "C:\sites\iconhub-api\server.cjs"
+nssm install iconhub-api "C:\Program Files
+odejs
+ode.exe" "C:\sites\iconhub-api\server.cjs"
 nssm start iconhub-api
 ```
 
 ---
 
-## 🧪 Diagnostic rapide
+## 🧪 Dépannage rapide
 
-| Problème | Cause probable | Solution |
-|-----------|----------------|-----------|
-| **502.3 Bad Gateway** | Node non démarré | Lancer `node server.cjs` |
-| **500.50 URL Rewrite** | Variable non autorisée | Supprimer `<serverVariables>` |
-| **413 Payload Too Large** | Upload trop gros | Ajouter `<requestLimits>` |
-| **404 /api/** | Mauvaise règle Rewrite | Vérifie `web.config` et ARR |
-| **Permission denied uploads** | Droits manquants | Donne *Modify* au compte du service Node |
+| Problème | Indice | Solution |
+|----------|--------|----------|
+| **502.3 Bad Gateway** | ARR/IIS ne joint pas Node | Vérifie que Node écoute sur `127.0.0.1:3001` (`npm start`, `netstat`), proxy activé |
+| **500.50 URL Rewrite** | Variable interdite | Retirer `<serverVariables>` (ex. `HTTP_X_FORWARDED_PROTO`) dans `web.config` |
+| **413 Payload Too Large** | Upload volumineux | `requestLimits maxAllowedContentLength` dans `web.config` |
+| **404 /api/** | Mauvaise règle | Règles `Rewrite` et ordre dans `web.config` |
+| **Accès dossier uploads** | Droits NTFS | Donner **Modify** au compte du service Node / IIS |
 
 ---
 
-## 📚 Liens utiles
+## 📚 Docs liées
 
-- [URL Rewrite for IIS](https://www.iis.net/downloads/microsoft/url-rewrite)
-- [Application Request Routing (ARR)](https://www.iis.net/downloads/microsoft/application-request-routing)
-- [Express documentation](https://expressjs.com/fr/)
-- [PM2 process manager](https://pm2.keymetrics.io/)
+- `iconhub-api/README.md` — détail API & endpoints  
+- `iconhub-ui/README.md` — setup UI (Vite, Tailwind, appels `/api`)  
+
+---
+
+## 🤝 Contribution
+
+1. Fork & branch (`feat/nom-fonctionnalite`)  
+2. Linter/tests : `npm run lint` (si configuré)  
+3. PR avec description claire (screenshots bienvenus)
+
+---
+
+## 📝 Licence
+
+MIT — fais-toi plaisir ✨

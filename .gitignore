@@ -1,0 +1,118 @@
+# -------------------------
+# 🌐 GLOBAL / SYSTEM FILES
+# -------------------------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tmp
+*.swp
+*.swo
+*.bak
+*.orig
+
+# VSCode / IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Windows
+$RECYCLE.BIN/
+*.lnk
+
+# -------------------------
+# ⚙️ NODE / JS PROJECTS
+# -------------------------
+node_modules/
+.npm/
+.pnpm-store/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+.cache/
+.tmp/
+coverage/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# -------------------------
+# 📦 FRONTEND (iconhub-ui)
+# -------------------------
+# Vite / React
+vite.config.ts.timestamp-*
+*.vite
+.vite/
+
+# Tailwind
+.postcssrc
+tailwind.config.js.timestamp-*
+
+# -------------------------
+# 🖥️ BACKEND (iconhub-api)
+# -------------------------
+uploads/
+uploads/**
+!uploads/.gitkeep
+
+# Logs & runtime
+logs/
+*.log
+pids/
+*.pid
+*.seed
+lib-cov/
+coverage/
+.nyc_output/
+
+# PM2
+.pids/
+.pm2/
+
+# -------------------------
+# 🧰 DEPLOYMENT / IIS
+# -------------------------
+# IIS-generated files
+iisnode.yml
+*.iisnode
+*.iisexpress
+IISExpress/
+
+# -------------------------
+# 🔐 SECURITY
+# -------------------------
+# Never commit private keys or credentials
+*.pem
+*.crt
+*.key
+*.pfx
+*.cert
+*.csr
+
+# -------------------------
+# 🚀 MISC
+# -------------------------
+# OS
+*.bak
+*.old
+*.tmp
+*.temp
+*.orig
+*.rej
+
+# Generated docs or PDFs
+*.pdf
+*.docx
+*.md.html
