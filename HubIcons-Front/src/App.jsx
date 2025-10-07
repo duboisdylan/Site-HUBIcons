@@ -56,7 +56,7 @@ function useLocalStorageState(key, initialValue) {
   useEffect(() => {
     try {
       localStorage.setItem(key, JSON.stringify(state));
-    } catch {}
+    } catch { }
   }, [key, state]);
   return [state, setState];
 }
@@ -110,10 +110,10 @@ function Toolbar({
       <div className="flex items-center gap-2">
         <button
           onClick={onOpenFileDialog}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-black text-white hover:bg-gray-800 active:scale-[.98] shadow"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border bg-white hover:bg-gray-50 shadow-sm"
         >
           <Upload className="w-4 h-4" />
-          Importer
+          Importer un fichier
         </button>
 
         <button
@@ -513,9 +513,9 @@ export default function IconManagerApp() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 text-gray-900">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-gray-50 text-gray-900">
       <header className="sticky top-0 z-10 backdrop-blur bg-white/70 border-b">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="w-full max-w-none px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-2xl bg-black text-white grid place-items-center">
               <Images className="w-5 h-5" />
@@ -537,7 +537,7 @@ export default function IconManagerApp() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+      <main className="flex-1 w-full max-w-none px-6 py-6 space-y-6">
         {/* Hidden input for file dialog */}
         <input
           ref={fileDialogRef}
