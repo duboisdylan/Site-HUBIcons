@@ -282,7 +282,7 @@ function IconCard({ icon, onToggle, onCopySVG, onCopyImg, onDownload, onDelete }
         <span>{bytesToNice(icon.size)}</span>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2">
         {icon.type === "image/svg+xml" ? (
           <button
             onClick={() => handleCopy("svg")}
