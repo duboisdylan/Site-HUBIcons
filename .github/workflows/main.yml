@@ -1,13 +1,9 @@
-name: CI/CD Deploy to IIS (HUBIcons)
+name: 🚀 Deploy HubIcons to IIS
 
 on:
   push:
-    branches: [ main ]   # ← change if needed
-  workflow_dispatch:
-
-concurrency:
-  group: iconhub-deploy
-  cancel-in-progress: true
+    branches: [ main ]   # Branche de déploiement
+  workflow_dispatch:     # Permet de lancer manuellement depuis GitHub Actions
 
 env:
   FRONT_SRC: HubIcons-Front
@@ -17,80 +13,58 @@ env:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, windows]   # your self-hosted runner labels
+    runs-on: [self-hosted, windows]  # ton runner auto-hébergé
     steps:
-      - name: Checkout
+      - name: 🧭 Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: ⚙️ Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'          # match your local version
+          node-version: '22'
 
-      # ---------- Frontend ----------
-      - name: Install UI deps
-        working-directory: ${{ env.FRONT_DST }}
-        run: npm ci
+      # ---------- FRONTEND ----------
+      - name: 📦 Install Front deps
+        working-directory: ${{ env.FRONT_SRC }}
+        run: npm install
 
-      - name: Build UI
-        working-directory: ${{ env.FRONT_DST }}
+      - name: 🏗️ Build Frontend
+        working-directory: ${{ env.FRONT_SRC }}
         run: npm run build
 
-      - name: Ensure IIS Front folder exists
-        run: |
-          if (!(Test-Path "${{ env.FRONT_DST }}")) {
-            New-Item -ItemType Directory -Path "${{ env.FRONT_DST }}" | Out-Null
-          }
-
-      - name: Deploy UI (mirror dist/ → IIS)
+      - name: 📂 Deploy Frontend to IIS
         shell: powershell
         run: |
           $src = Join-Path "${{ github.workspace }}" "${{ env.FRONT_SRC }}\dist"
           $dst = "${{ env.FRONT_DST }}"
-          # Mirror dist into IIS folder, keep web.config if you have one there
-          robocopy $src $dst /MIR /NFL /NDL /NJH /NJS /NP /R:1 /W:1 /XF web.config | Out-Null
+          if (!(Test-Path $dst)) { New-Item -ItemType Directory -Path $dst | Out-Null }
+          robocopy $src $dst /MIR /XF web.config /R:1 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+          Write-Host "✅ Frontend déployé dans $dst"
 
-      # ---------- API ----------
-      - name: Ensure IIS API folder exists
-        run: |
-          if (!(Test-Path "${{ env.API_DST }}")) {
-            New-Item -ItemType Directory -Path "${{ env.API_DST }}" | Out-Null
-          }
+      # ---------- BACKEND ----------
+      - name: 📦 Install API deps
+        working-directory: ${{ env.API_SRC }}
+        run: npm install --omit=dev
 
-      - name: Install API deps (clean) in a temp dir
-        run: |
-          # install into the source folder first
-          cd "${{ env.API_SRC }}"
-          npm ci --omit=dev
-
-      - name: Deploy API (mirror → IIS)
+      - name: 📂 Deploy API to IIS
         shell: powershell
         run: |
           $src = Join-Path "${{ github.workspace }}" "${{ env.API_SRC }}"
           $dst = "${{ env.API_DST }}"
-          # mirror code, include node_modules
-          robocopy $src $dst /MIR /NFL /NDL /NJH /NJS /NP /R:1 /W:1 | Out-Null
+          if (!(Test-Path $dst)) { New-Item -ItemType Directory -Path $dst | Out-Null }
+          robocopy $src $dst /MIR /R:1 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+          Write-Host "✅ API copiée dans $dst"
 
-      # ---------- Restart API (choose ONE of these blocks) ----------
-      # Option A: PM2 (recommended if you already use PM2 on Windows)
-      - name: Restart API via PM2
-        if: ${{ true }}     # set to false if you use NSSM instead
+      # ---------- RESTART API ----------
+      - name: 🔁 Restart API via PM2
         shell: powershell
         run: |
-          pm2 delete iconhub-api 2>$null | Out-Null
-          pm2 start "${{ env.API_DST }}\server.cjs" --name iconhub-api
+          pm2 delete hubicons-api 2>$null | Out-Null
+          pm2 start "${{ env.API_DST }}\server.cjs" --name hubicons-api
           pm2 save
+          Write-Host "♻️ API redémarrée via PM2"
 
-      # Option B: NSSM (if you created a Windows service named iconhub-api)
-      - name: Restart API via NSSM
-        if: ${{ false }}    # set to true if you use NSSM instead of PM2
-        shell: powershell
-        run: |
-          nssm stop iconhub-api
-          Start-Sleep -Seconds 2
-          nssm start iconhub-api
-
-      # ---------- (Optional) Reload IIS if you changed web.config/static site ----------
-      - name: IIS reset (optional)
+      # ---------- (Optionnel) Reload IIS ----------
+      - name: 🔃 IIS Reset (optional)
         if: ${{ false }}
         run: iisreset
