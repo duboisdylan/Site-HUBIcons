@@ -190,7 +190,7 @@ Place ce fichier à la **racine** du site IIS qui sert le build React :
 ### Avec **PM2**
 ```bash
 npm i -g pm2
-pm2 start server.cjs --name iconhub-api
+pm2 start server.cjs --name hubicons-api
 pm2 save
 pm2 startup
 ```
