@@ -29,11 +29,11 @@ jobs:
 
       # ---------- Frontend ----------
       - name: Install UI deps
-        working-directory: ${{ env.FRONT_SRC }}
+        working-directory: ${{ env.FRONT_DST }}
         run: npm ci
 
       - name: Build UI
-        working-directory: ${{ env.FRONT_SRC }}
+        working-directory: ${{ env.FRONT_DST }}
         run: npm run build
 
       - name: Ensure IIS Front folder exists
