@@ -47,13 +47,12 @@ jobs:
             Write-Host "❌ Robocopy a échoué (code $exitCode)"
             exit $exitCode
           }
+      - name: 🧩 Ensure web.config is deployed
+        shell: powershell
+        run: |
+          Copy-Item "${{ env.FRONT_SRC }}\web.config" "${{ env.FRONT_DST }}\web.config" -Force
+          Write-Host "✅ web.config déployé vers $env:FRONT_DST"
 
-          - name: 🧩 Ensure web.config is deployed
-            shell: powershell
-            run: |
-              Copy-Item "${{ env.FRONT_SRC }}\web.config" "${{ env.FRONT_DST }}\web.config" -Force
-              Write-Host "✅ web.config déployé vers $env:FRONT_DST"
-              
       # ---------- BACKEND ----------
       - name: 📦 Install API deps
         working-directory: ${{ env.API_SRC }}
