@@ -140,10 +140,10 @@ function Toolbar({
 
         <button
           onClick={onClear}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border bg-white hover:bg-gray-50 shadow-sm"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border bg-red-500 hover:bg-gray-50 shadow-sm"
         >
           <Trash2 className="w-4 h-4" />
-          Tout effacer
+          Tout supprimer
         </button>
       </div>
 
