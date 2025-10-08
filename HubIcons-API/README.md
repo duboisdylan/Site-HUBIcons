@@ -5,6 +5,15 @@ Application web permettant d’importer, gérer, copier et télécharger des ic�
 
 ---
 
+## 📦 Dépendances
+// server.cjs (CommonJS)
+const express = require("express");
+const cors = require("cors");
+const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
+swagger-ui-express swagger-jsdoc
+
 ## 📦 Structure du projet
 
 ```
