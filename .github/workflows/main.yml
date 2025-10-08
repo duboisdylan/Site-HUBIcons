@@ -59,7 +59,7 @@ jobs:
           $src = Join-Path "${{ github.workspace }}" "${{ env.API_SRC }}"
           $dst = "${{ env.API_DST }}"
           if (!(Test-Path $dst)) { New-Item -ItemType Directory -Path $dst | Out-Null }
-          robocopy $src $dst /MIR /R:1 /W:1 /NFL /NDL /NJH /NJS /NP
+          robocopy $src $dst /MIR /XD uploads /R:1 /W:1 /NFL /NDL /NJH /NJS /NP
           $exitCode = $LASTEXITCODE
           if ($exitCode -lt 8) {
             Write-Host "✅ API copiée dans $dst (code Robocopy: $exitCode)"
