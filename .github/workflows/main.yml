@@ -1,0 +1,96 @@
+name: CI/CD Deploy to IIS (HUBIcons)
+
+on:
+  push:
+    branches: [ main ]   # ← change if needed
+  workflow_dispatch:
+
+concurrency:
+  group: iconhub-deploy
+  cancel-in-progress: true
+
+env:
+  FRONT_SRC: HubIcons-Front
+  API_SRC: HubIcons-API
+  FRONT_DST: C:\inetpub\wwwroot\HubIcons-Front
+  API_DST: C:\inetpub\wwwroot\HubIcons-API
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, windows]   # your self-hosted runner labels
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'          # match your local version
+
+      # ---------- Frontend ----------
+      - name: Install UI deps
+        working-directory: ${{ env.FRONT_SRC }}
+        run: npm ci
+
+      - name: Build UI
+        working-directory: ${{ env.FRONT_SRC }}
+        run: npm run build
+
+      - name: Ensure IIS Front folder exists
+        run: |
+          if (!(Test-Path "${{ env.FRONT_DST }}")) {
+            New-Item -ItemType Directory -Path "${{ env.FRONT_DST }}" | Out-Null
+          }
+
+      - name: Deploy UI (mirror dist/ → IIS)
+        shell: powershell
+        run: |
+          $src = Join-Path "${{ github.workspace }}" "${{ env.FRONT_SRC }}\dist"
+          $dst = "${{ env.FRONT_DST }}"
+          # Mirror dist into IIS folder, keep web.config if you have one there
+          robocopy $src $dst /MIR /NFL /NDL /NJH /NJS /NP /R:1 /W:1 /XF web.config | Out-Null
+
+      # ---------- API ----------
+      - name: Ensure IIS API folder exists
+        run: |
+          if (!(Test-Path "${{ env.API_DST }}")) {
+            New-Item -ItemType Directory -Path "${{ env.API_DST }}" | Out-Null
+          }
+
+      - name: Install API deps (clean) in a temp dir
+        run: |
+          # install into the source folder first
+          cd "${{ env.API_SRC }}"
+          npm ci --omit=dev
+
+      - name: Deploy API (mirror → IIS)
+        shell: powershell
+        run: |
+          $src = Join-Path "${{ github.workspace }}" "${{ env.API_SRC }}"
+          $dst = "${{ env.API_DST }}"
+          # mirror code, include node_modules
+          robocopy $src $dst /MIR /NFL /NDL /NJH /NJS /NP /R:1 /W:1 | Out-Null
+
+      # ---------- Restart API (choose ONE of these blocks) ----------
+      # Option A: PM2 (recommended if you already use PM2 on Windows)
+      - name: Restart API via PM2
+        if: ${{ true }}     # set to false if you use NSSM instead
+        shell: powershell
+        run: |
+          pm2 delete iconhub-api 2>$null | Out-Null
+          pm2 start "${{ env.API_DST }}\server.cjs" --name iconhub-api
+          pm2 save
+
+      # Option B: NSSM (if you created a Windows service named iconhub-api)
+      - name: Restart API via NSSM
+        if: ${{ false }}    # set to true if you use NSSM instead of PM2
+        shell: powershell
+        run: |
+          nssm stop iconhub-api
+          Start-Sleep -Seconds 2
+          nssm start iconhub-api
+
+      # ---------- (Optional) Reload IIS if you changed web.config/static site ----------
+      - name: IIS reset (optional)
+        if: ${{ false }}
+        run: iisreset
