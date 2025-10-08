@@ -289,7 +289,7 @@ function IconCard({ icon, onToggle, onCopySVG, onCopyImg, onDownload, onDelete }
             className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-xl border bg-white hover:bg-gray-50"
             title="Copier le code SVG"
           >
-            {copied === "svg" ? <Check className="w-4 h-4" /> : <ClipboardIcon className="w-4 h-4" />}
+            {copied === "svg" ? <Check className="w-6 h-4" /> : <ClipboardIcon className="w-6 h-4" />}
             <span className="hidden sm:inline">SVG</span>
           </button>
         ) : (
@@ -298,7 +298,7 @@ function IconCard({ icon, onToggle, onCopySVG, onCopyImg, onDownload, onDelete }
             className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-xl border bg-white hover:bg-gray-50"
             title="Copier l'image dans le presse-papiers"
           >
-            {copied === "img" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            {copied === "img" ? <Check className="w-6 h-4" /> : <Copy className="w-6 h-4" />}
             <span className="hidden sm:inline">PNG</span>
           </button>
         )}
@@ -308,21 +308,9 @@ function IconCard({ icon, onToggle, onCopySVG, onCopyImg, onDownload, onDelete }
           className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-xl border bg-white hover:bg-gray-50"
           title="Télécharger"
         >
-          <Download className="w-4 h-4" />
+          <Download className="w-6 h-4" />
           <span className="hidden sm:inline">DL</span>
         </button>
-
-        <a
-          href={icon.dataURL}
-          download={icon.name}
-          className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-xl border bg-white hover:bg-gray-50"
-          title="Ouvrir dans un nouvel onglet"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <Images className="w-4 h-4" />
-          <span className="hidden sm:inline">Ouvrir</span>
-        </a>
       </div>
     </motion.div>
   );
