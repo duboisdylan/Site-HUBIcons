@@ -9,9 +9,9 @@ Le frontend est développé en **React + Tailwind CSS + Framer Motion + JSZip + 
 ## 📁 Structure du dépôt
 
 ```
-IconHub/
- ├─ iconhub-api/       ← API Node.js (Express / Multer / stockage local)
- ├─ iconhub-ui/        ← Frontend React (Vite + Tailwind + Framer Motion)
+SITE-HubIcons/
+ ├─ HubIcons-API/       ← API Node.js (Express / Multer / stockage local)
+ ├─ HubIcons-Front/        ← Frontend React (Vite + Tailwind + Framer Motion)
  ├─ .gitignore
  └─ README.md          ← Ce fichier
 ```
