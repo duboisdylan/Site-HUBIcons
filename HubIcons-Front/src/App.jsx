@@ -140,7 +140,7 @@ function Toolbar({
 
         <button
           onClick={onClear}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border bg-red-500 hover:bg-gray-50 shadow-sm"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border border-red-400 bg-red-100 text-red-700 hover:bg-red-200 shadow-sm"
         >
           <Trash2 className="w-4 h-4" />
           Tout supprimer
@@ -607,13 +607,11 @@ export default function IconManagerApp() {
             </motion.div>
           </>
         )}
-
         <section className="mt-8 text-xs text-gray-500 leading-relaxed">
           <h2 className="text-sm font-semibold text-gray-700 mb-2">Notes</h2>
           <ul className="list-disc ml-5 space-y-1">
             <li>La copie d’images requiert un contexte sécurisé (HTTPS) et des permissions du navigateur.</li>
-            <li>Les icônes sont maintenant stockées sur le <strong>serveur</strong> (IIS → Node). L’application recharge la liste via <code>/api/list</code>.</li>
-            <li>Le ZIP est généré côté client via <code>JSZip</code>.</li>
+            <li>Le site est actuellement en cours de développement.</li>
           </ul>
         </section>
       </main>
