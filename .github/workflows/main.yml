@@ -38,8 +38,15 @@ jobs:
           $src = Join-Path "${{ github.workspace }}" "${{ env.FRONT_SRC }}\dist"
           $dst = "${{ env.FRONT_DST }}"
           if (!(Test-Path $dst)) { New-Item -ItemType Directory -Path $dst | Out-Null }
-          robocopy $src $dst /MIR /XF web.config /R:1 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
-          Write-Host "✅ Frontend déployé dans $dst"
+          robocopy $src $dst /MIR /XF web.config /R:1 /W:1 /NFL /NDL /NJH /NJS /NP
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -lt 8) {
+            Write-Host "✅ Frontend déployé dans $dst (code Robocopy: $exitCode)"
+            exit 0
+          } else {
+            Write-Host "❌ Robocopy a échoué (code $exitCode)"
+            exit $exitCode
+          }
 
       # ---------- BACKEND ----------
       - name: 📦 Install API deps
