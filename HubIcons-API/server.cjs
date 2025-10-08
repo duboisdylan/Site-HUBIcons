@@ -165,6 +165,7 @@ app.post("/api/upload", upload.array("files"), (req, res) => {
 });
 
 app.get("/api/list", (req, res) => {
+  res.set("Cache-Control", "no-store");   // 👈 important
   const dir = path.join(__dirname, "uploads");
   if (!fs.existsSync(dir)) return res.json([]);
   const files = fs.readdirSync(dir).map((name) => ({
