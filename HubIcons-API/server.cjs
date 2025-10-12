@@ -1,214 +1,252 @@
-// server.cjs (CommonJS)
+// server.cjs
+// Node + Express + Multer — gestion d'icônes par catégories
+
 const express = require("express");
-const cors = require("cors");
 const multer = require("multer");
-const fs = require("fs");
 const path = require("path");
-const swaggerUi = require("swagger-ui-express");
-const swaggerJsdoc = require("swagger-jsdoc");
+const fs = require("fs");
+const fsp = fs.promises;
+const cors = require("cors");
 
 const app = express();
-app.use(cors());
+const PORT = process.env.PORT || 3000;
 
-// --- Swagger (OpenAPI 3) ---
-const swaggerDefinition = {
-  openapi: "3.0.3",
-  info: {
-    title: "HubIcons API",
-    version: "1.0.0",
-    description: "API d’upload et de gestion d’icônes (PNG/SVG).",
-  },
-  servers: [
-    { url: "http://100.112.254.48", description: "Via IIS (proxy /api)"},
-    { url: "http://localhost", description: "Via localhost" }
-  ],
-  paths: {
-    "/api/list": {
-      get: {
-        summary: "Lister les icônes",
-        tags: ["icons"],
-        responses: {
-          "200": {
-            description: "Liste d'icônes",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string" },
-                      url: { type: "string", example: "/api/uploads/icon.svg" },
-                      type: { type: "string", example: "image/svg+xml" },
-                      size: { type: "integer", example: 1234 },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-    "/api/upload": {
-      post: {
-        summary: "Uploader une ou plusieurs icônes",
-        tags: ["icons"],
-        requestBody: {
-          required: true,
-          content: {
-            "multipart/form-data": {
-              schema: {
-                type: "object",
-                properties: {
-                  files: {
-                    type: "array",
-                    items: { type: "string", format: "binary" },
-                  },
-                  relpaths: { type: "string", description: "JSON array optionnel des chemins relatifs" },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          "200": {
-            description: "Icônes uploadées",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string" },
-                      url: { type: "string" },
-                      type: { type: "string" },
-                      size: { type: "integer" },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-    "/api/delete/{name}": {
-      delete: {
-        summary: "Supprimer une icône par son nom de fichier",
-        tags: ["icons"],
-        parameters: [
-          {
-            name: "name",
-            in: "path",
-            required: true,
-            schema: { type: "string" },
-            description: "Nom du fichier (ex: 1699999-home.svg)",
-          },
-        ],
-        responses: {
-          "200": {
-            description: "Supprimé",
-            content: { "application/json": { schema: { type: "object", properties: { ok: { type: "boolean" } } } } },
-          },
-          "404": { description: "Fichier introuvable" },
-        },
-      },
-    },
-    "/api/uploads/{file}": {
-      get: {
-        summary: "Servir un fichier uploadé",
-        tags: ["icons"],
-        parameters: [
-          { name: "file", in: "path", required: true, schema: { type: "string" } },
-        ],
-        responses: {
-          "200": { description: "Fichier binaire" },
-          "404": { description: "Introuvable" },
-        },
-      },
-    },
-  },
-};
+// Dossier racine de stockage
+const UPLOAD_DIR = path.resolve(__dirname, "uploads");
 
-const swaggerSpec = swaggerJsdoc({
-  definition: swaggerDefinition,
-  apis: [], // on n’utilise pas d’annotations JSDoc ici, tout est inline
-});
+// --- Utils ------------------------------------------------------------------
 
-// UI sous /api/docs et JSON sous /api/openapi.json
-app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.get("/api/openapi.json", (_req, res) => res.json(swaggerSpec));
+function bytes(n) {
+  return typeof n === "number" ? n : 0;
+}
 
-// ➜ Sert les fichiers uploadés derrière /api/uploads
-app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));
+function inferTypeFromName(name = "") {
+  const lower = name.toLowerCase();
+  if (lower.endsWith(".svg")) return "image/svg+xml";
+  if (lower.endsWith(".png")) return "image/png";
+  return "application/octet-stream";
+}
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const category = req.query.category || "default";
-    const dir = path.join(__dirname, "uploads", category);
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
-});
-const upload = multer({ storage });
+// Liste les sous-dossiers immédiats du répertoire UPLOAD_DIR
+async function listCategories() {
+  try {
+    const entries = await fsp.readdir(UPLOAD_DIR, { withFileTypes: true });
+    return entries.filter((e) => e.isDirectory()).map((e) => e.name);
+  } catch {
+    return [];
+  }
+}
 
-// ➜ Toutes les routes API sont préfixées par /api
-app.post("/api/upload", upload.array("files"), (req, res) => {
-  const category = req.query.category || "default";
-  const files = (req.files || []).map((f) => ({
-    name: f.originalname,
-    category,
-    url: `/api/uploads/${category}/${path.basename(f.filename)}`, // <<< important
-    type: f.mimetype,
-    size: f.size,
-  }));
-  res.json(files);
-});
+// Garantit l’existence d’un dossier
+async function ensureDir(dir) {
+  await fsp.mkdir(dir, { recursive: true });
+}
 
-app.get("/api/list", (req, res) => {
-  const root = path.join(__dirname, "uploads");
-  const category = req.query.category;
-  let result = [];
+// Retourne le chemin dossier correspondant à la catégorie
+// - "default" ou non fourni => UPLOAD_DIR (racine)
+// - "UI" => uploads/UI, etc.
+function categoryFolder(category) {
+  if (!category || category === "default") return UPLOAD_DIR;
+  return path.join(UPLOAD_DIR, path.basename(category)); // basename pour éviter path traversal
+}
 
-  if (category) {
-    const dir = path.join(root, category);
-    if (fs.existsSync(dir)) {
-      result = fs.readdirSync(dir).map((name) => ({
-        name,
-        category,
-        url: `/api/uploads/${category}/${name}`,
-      }));
-    }
+// Construit l’URL publique d’un fichier
+function publicUrl(category, fileName) {
+  const safe = encodeURIComponent(fileName);
+  if (!category || category === "default") return `/uploads/${safe}`;
+  return `/uploads/${encodeURIComponent(category)}/${safe}`;
+}
+
+// Convertit un fichier en objet côté client
+function toClientFile({ category, name, size }) {
+  return {
+    name,
+    url: publicUrl(category, name),
+    type: inferTypeFromName(name),
+    size: bytes(size),
+    category: category || "default",
+  };
+}
+
+// Cherche un fichier par nom dans une catégorie précise OU dans toutes
+// Retourne { fullPath, categoryFound } si trouvé, sinon null
+async function findFileAcrossCategories(fileName, category) {
+  const safeName = path.basename(fileName);
+  const candidates = [];
+
+  if (category && category !== "default") {
+    candidates.push({ category, folder: categoryFolder(category) });
   } else {
-    // liste toutes les catégories
-    const categories = fs.readdirSync(root, { withFileTypes: true })
-      .filter((d) => d.isDirectory())
-      .map((d) => d.name);
-
-    result = categories.flatMap((cat) => {
-      const dir = path.join(root, cat);
-      return fs.readdirSync(dir).map((name) => ({
-        name,
-        category: cat,
-        url: `/api/uploads/${cat}/${name}`,
-      }));
-    });
+    // Cherche d’abord à la racine
+    candidates.push({ category: "default", folder: UPLOAD_DIR });
+    // Puis dans chaque sous-dossier
+    const cats = await listCategories();
+    for (const c of cats) candidates.push({ category: c, folder: categoryFolder(c) });
   }
 
-  res.json(result);
+  for (const c of candidates) {
+    const full = path.join(c.folder, safeName);
+    try {
+      const st = await fsp.stat(full);
+      if (st.isFile()) return { fullPath: full, categoryFound: c.category };
+    } catch {
+      // ignore
+    }
+  }
+  return null;
+}
+
+// --- Middlewares ------------------------------------------------------------
+
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Expose les fichiers statiques
+app.use("/uploads", express.static(UPLOAD_DIR, {
+  fallthrough: true,
+  extensions: ["svg", "png"],
+  // cache léger de 5 min
+  maxAge: "5m",
+}));
+
+// Multer: stocke temporairement en mémoire; on déplace nous-mêmes ensuite
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25MB
+    files: 200,
+  },
+  fileFilter: (_req, file, cb) => {
+    const ok = ["image/svg+xml", "image/png"].includes(file.mimetype)
+      || [".svg", ".png"].some((ext) => file.originalname.toLowerCase().endsWith(ext));
+    cb(ok ? null : new Error("TYPE_NOT_ALLOWED"), ok);
+  },
 });
 
+// --- Routes API -------------------------------------------------------------
 
-app.delete("/api/delete/:category/:name", (req, res) => {
-  const filePath = path.join(__dirname, "uploads", req.params.category, req.params.name);
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-  res.json({ ok: true });
+/**
+ * GET /api/list?category=UI|System|Social|Apps|default
+ * - category=default ou absent => renvoie l’ensemble (racine + sous-dossiers)
+ * - category=nom => renvoie uniquement cette catégorie
+ */
+app.get("/api/list", async (req, res) => {
+  const { category } = req.query;
+
+  try {
+    await ensureDir(UPLOAD_DIR);
+
+    // Cas spécifique: une catégorie précise
+    if (category && category !== "default") {
+      const folder = categoryFolder(category);
+      await ensureDir(folder);
+      const files = await fsp.readdir(folder, { withFileTypes: true });
+      const out = [];
+      for (const f of files) {
+        if (!f.isFile()) continue;
+        const full = path.join(folder, f.name);
+        const st = await fsp.stat(full);
+        out.push(toClientFile({ category, name: f.name, size: st.size }));
+      }
+      return res.json(out);
+    }
+
+    // Sinon, on renvoie tout (racine + sous-dossiers)
+    const out = [];
+
+    // Racine
+    const rootFiles = await fsp.readdir(UPLOAD_DIR, { withFileTypes: true });
+    for (const f of rootFiles) {
+      if (f.isFile()) {
+        const full = path.join(UPLOAD_DIR, f.name);
+        const st = await fsp.stat(full);
+        out.push(toClientFile({ category: "default", name: f.name, size: st.size }));
+      }
+    }
+
+    // Sous-dossiers
+    const cats = await listCategories();
+    for (const c of cats) {
+      const folder = categoryFolder(c);
+      const files = await fsp.readdir(folder, { withFileTypes: true });
+      for (const f of files) {
+        if (!f.isFile()) continue;
+        const full = path.join(folder, f.name);
+        const st = await fsp.stat(full);
+        out.push(toClientFile({ category: c, name: f.name, size: st.size }));
+      }
+    }
+
+    res.json(out);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json([]);
+  }
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, "127.0.0.1", () =>
-  console.log(`✅ API Icons sur http://127.0.0.1:${PORT}`)
-);
+/**
+ * POST /api/upload?category=...
+ * - Stocke chaque fichier dans le dossier correspondant à la catégorie.
+ * - Si category=default (ou manquante), on stocke à la racine /uploads.
+ */
+app.post("/api/upload", upload.array("files"), async (req, res) => {
+  const { category } = req.query;
+  const targetFolder = categoryFolder(category);
+
+  try {
+    await ensureDir(targetFolder);
+
+    const results = [];
+    for (const file of req.files || []) {
+      const safeName = path.basename(file.originalname);
+      const dest = path.join(targetFolder, safeName);
+      await fsp.writeFile(dest, file.buffer);
+      const st = await fsp.stat(dest);
+
+      results.push({
+        name: safeName,
+        url: publicUrl(category, safeName),
+        type: inferTypeFromName(safeName),
+        size: bytes(st.size),
+        category: category || "default",
+      });
+    }
+    res.json(results);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "UPLOAD_FAILED" });
+  }
+});
+
+/**
+ * DELETE /api/delete/:fileName[?category=...]
+ * - Compatible avec ton App.jsx actuel qui envoie seulement le nom de fichier.
+ * - Si category est fournie, on supprime dans cette catégorie.
+ * - Sinon, on cherche le fichier (racine + toutes catégories) et on supprime la première occurrence.
+ */
+app.delete("/api/delete/:fileName", async (req, res) => {
+  const { fileName } = req.params;
+  const { category } = req.query;
+
+  try {
+    const found = await findFileAcrossCategories(fileName, category);
+    if (!found) return res.status(404).json({ error: "NOT_FOUND" });
+
+    await fsp.unlink(found.fullPath);
+    return res.json({ ok: true, deleted: path.basename(fileName), category: found.categoryFound });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "DELETE_FAILED" });
+  }
+});
+
+// --- Démarrage --------------------------------------------------------------
+
+(async () => {
+  await ensureDir(UPLOAD_DIR);
+  app.listen(PORT, () => {
+    console.log(`Icon server listening on http://localhost:${PORT}`);
+    console.log(`Static files served from /uploads`);
+  });
+})();
