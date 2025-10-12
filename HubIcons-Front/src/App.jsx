@@ -105,7 +105,7 @@ function Toolbar({
   onSelectAll,
   total,
   category,
-  setcategory,
+  setCategory,
 }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -402,7 +402,7 @@ useEffect(() => {
       selected: false,
     }));
     setIcons(prev => [...mapped, ...prev]);
-  }, []);
+  }, [category]);
 
   const openFileDialog = () => fileDialogRef.current?.click();
 
