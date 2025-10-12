@@ -19,9 +19,8 @@ const swaggerDefinition = {
     description: "API d’upload et de gestion d’icônes (PNG/SVG).",
   },
   servers: [
-    { url: "http://100.112.254.48", description: "Via IIS (proxy /api)",
-      url: "http://localhost", description: "Via localhost"
-     }
+    { url: "http://100.112.254.48", description: "Via IIS (proxy /api)"},
+    { url: "http://localhost", description: "Via localhost" }
   ],
   paths: {
     "/api/list": {
@@ -30,7 +29,7 @@ const swaggerDefinition = {
         tags: ["icons"],
         responses: {
           "200": {
-            description: "Liste d’icônes",
+            description: "Liste d'icônes",
             content: {
               "application/json": {
                 schema: {
