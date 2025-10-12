@@ -146,7 +146,8 @@ app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(__dirname, "uploads");
+    const category = req.query.category || "default";
+    const dir = path.join(__dirname, "uploads", category);
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
@@ -156,9 +157,11 @@ const upload = multer({ storage });
 
 // ➜ Toutes les routes API sont préfixées par /api
 app.post("/api/upload", upload.array("files"), (req, res) => {
+  const category = req.query.category || "default";
   const files = (req.files || []).map((f) => ({
     name: f.originalname,
-    url: `/api/uploads/${path.basename(f.filename)}`, // <<< important
+    category,
+    url: `/api/uploads/${category}/${path.basename(f.filename)}`, // <<< important
     type: f.mimetype,
     size: f.size,
   }));
@@ -166,18 +169,41 @@ app.post("/api/upload", upload.array("files"), (req, res) => {
 });
 
 app.get("/api/list", (req, res) => {
-  res.set("Cache-Control", "no-store");   // 👈 important
-  const dir = path.join(__dirname, "uploads");
-  if (!fs.existsSync(dir)) return res.json([]);
-  const files = fs.readdirSync(dir).map((name) => ({
-    name,
-    url: `/api/uploads/${name}`, // <<< important
-  }));
-  res.json(files);
+  const root = path.join(__dirname, "uploads");
+  const category = req.query.category;
+  let result = [];
+
+  if (category) {
+    const dir = path.join(root, category);
+    if (fs.existsSync(dir)) {
+      result = fs.readdirSync(dir).map((name) => ({
+        name,
+        category,
+        url: `/api/uploads/${category}/${name}`,
+      }));
+    }
+  } else {
+    // liste toutes les catégories
+    const categories = fs.readdirSync(root, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name);
+
+    result = categories.flatMap((cat) => {
+      const dir = path.join(root, cat);
+      return fs.readdirSync(dir).map((name) => ({
+        name,
+        category: cat,
+        url: `/api/uploads/${cat}/${name}`,
+      }));
+    });
+  }
+
+  res.json(result);
 });
 
-app.delete("/api/delete/:name", (req, res) => {
-  const filePath = path.join(__dirname, "uploads", req.params.name);
+
+app.delete("/api/delete/:category/:name", (req, res) => {
+  const filePath = path.join(__dirname, "uploads", req.params.category, req.params.name);
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
   res.json({ ok: true });
 });

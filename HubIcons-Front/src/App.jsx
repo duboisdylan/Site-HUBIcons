@@ -104,10 +104,24 @@ function Toolbar({
   selectedCount,
   onSelectAll,
   total,
+  category,
+  setcategory,
 }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2">
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="px-3 py-2 rounded-2xl border bg-white hover:bg-gray-50 shadow-sm"
+        >
+          <option value="default">Toutes catégories</option>
+          <option value="UI">UI</option>
+          <option value="System">System</option>
+          <option value="Social">Social</option>
+          <option value="Apps">Apps</option>
+        </select>
+
         <button
           onClick={onOpenFileDialog}
           className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border bg-white hover:bg-gray-50 shadow-sm"
@@ -319,28 +333,30 @@ function IconCard({ icon, onToggle, onCopySVG, onCopyImg, onDownload, onDelete }
 export default function IconManagerApp() {
   const [icons, setIcons] = useState([]);
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("default");
   const fileDialogRef = useRef(null);
   const zipDialogRef = useRef(null);
 
   // Charge la liste depuis le serveur au démarrage
-  useEffect(() => {
-    fetch("/api/list")
-      .then(r => r.json())
-      .then((serverFiles) => {
-        const mapped = (serverFiles || []).map(f => ({
-          id: f.url,
-          name: f.name,
-          type: f.type || inferTypeFromName(f.name),
-          size: f.size ?? 0,
-          dataURL: f.url,
-          svgText: undefined,
-          createdAt: Date.now(),
-          selected: false,
-        }));
-        setIcons(mapped);
-      })
-      .catch(() => setIcons([]));
-  }, []);
+useEffect(() => {
+  fetch(`/api/list?category=${encodeURIComponent(category)}`)
+    .then(r => r.json())
+    .then((serverFiles) => {
+      const mapped = (serverFiles || []).map(f => ({
+        id: f.url,
+        name: f.name,
+        type: f.type || inferTypeFromName(f.name),
+        size: f.size ?? 0,
+        dataURL: f.url,
+        category: f.category || category, // 👈 ajoute la catégorie
+        svgText: undefined,
+        createdAt: Date.now(),
+        selected: false,
+      }));
+      setIcons(mapped);
+    })
+    .catch(() => setIcons([]));
+}, [category]);
 
   // Précharger doucement le texte des SVG pour l'aperçu
   useEffect(() => {
@@ -368,7 +384,11 @@ export default function IconManagerApp() {
     if (accepted.length === 0) return;
     const form = new FormData();
     for (const f of accepted) form.append("files", f);
-    const res = await fetch("/api/upload", { method: "POST", body: form });
+    const res = await fetch(`/api/upload?category=${encodeURIComponent(category)}`, {
+      method: "POST",
+      body: form,
+    });
+
     if (!res.ok) { alert("Échec de l'upload"); return; }
     const uploaded = await res.json();
     const mapped = uploaded.map(f => ({
@@ -556,6 +576,8 @@ export default function IconManagerApp() {
           selectedCount={selectedCount}
           onSelectAll={selectAll}
           total={icons.length}
+          category={category}          // 👈 ajout
+          setCategory={setCategory}    // 👈 ajout
         />
 
         <DropZone onFiles={handleFiles} />
